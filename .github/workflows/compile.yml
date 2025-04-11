@@ -1,0 +1,30 @@
+name: Compile and release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v4
+
+    
+        - name: intall gcc
+          run: sudo apt-get install gcc -y
+
+        - name: compile executables
+          run: |
+           for optimazation in 0 1 2 3; do
+            for file in *.c; do
+              gcc -o "${file%.c}-O$optimazation.out" "$file" -O$optimazation
+            done
+           done
+
+        - name: Release the compiled program
+          uses: ncipollo/release-action@v1
+          with:
+            artifacts: "*.out"
+            allowUpdates: true
