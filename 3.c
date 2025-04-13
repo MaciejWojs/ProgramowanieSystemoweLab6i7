@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -7,6 +8,22 @@ void child(void) {
     printf("\n\n");
     printf("Jestem procesem potomnym, mój PID to %d, PPID: %d\n", getpid(), getppid());
     execl("SIGTERM.out", "", NULL);
+}
+
+void zinterpretuj(int status, pid_t child_pid) {
+    if (child_pid == -1) {
+        perror("Wait failed");
+        exit(1);
+    }
+
+    if (WIFEXITED(status)) {
+        printf("Zakończono proces potomny %d z kodem %d\n", child_pid, WEXITSTATUS(status));
+    }
+
+    if (WIFSIGNALED(status)) {
+        printf("Proces potomny %d zniszczony sygnałem %d%s\n", child_pid, WTERMSIG(status),
+            WCOREDUMP(status) ? " (wykonano zrzut systemowy)" : "");
+    }
 }
 
 int main(void) {
@@ -26,21 +43,7 @@ int main(void) {
 
         int child_status;
         pid_t child_pid = wait(&child_status);
-
-        if (child_pid == -1) {
-            perror("Wait failed");
-            return 1;
-        }
-
-        if (WIFEXITED(child_status)) {
-            printf("Zakończono proces potomny %d z kodem %d\n", child_pid, WEXITSTATUS(child_status));
-        }
-
-        if (WIFSIGNALED(child_status)) {
-            printf("Proces potomny %d zniszczony sygnałem %d%s\n", child_pid, WTERMSIG(child_status),
-                WCOREDUMP(child_status) ? " (wykonano zrzut systemowy)" : "");
-        }
-
+        zinterpretuj(child_status, child_pid);
     }
 
     fork_status = fork();
@@ -56,20 +59,7 @@ int main(void) {
     } else {
         int child_status;
         pid_t child_pid = wait(&child_status);
-
-        if (child_pid == -1) {
-            perror("Wait failed");
-            return 1;
-        }
-
-        if (WIFEXITED(child_status)) {
-            printf("Zakończono proces potomny %d z kodem %d\n", child_pid, WEXITSTATUS(child_status));
-        }
-
-        if (WIFSIGNALED(child_status)) {
-            printf("Proces potomny %d zniszczony sygnałem %d%s\n", child_pid, WTERMSIG(child_status),
-                WCOREDUMP(child_status) ? " (wykonano zrzut systemowy)" : "");
-        }
+        zinterpretuj(child_status, child_pid);
     }
 
     return 0;
